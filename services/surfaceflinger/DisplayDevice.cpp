@@ -91,6 +91,7 @@ DisplayDevice::DisplayDevice(
     Surface* surface;
     mNativeWindow = surface = new Surface(producer, false);
     ANativeWindow* const window = mNativeWindow.get();
+    char property[PROPERTY_VALUE_MAX];
 
     /*
      * Create our display's surface
@@ -140,6 +141,11 @@ DisplayDevice::DisplayDevice(
             mDisplayName = "Virtual Screen";    // e.g. Overlay #n
             break;
     }
+
+    mPanelInverseMounted = false;
+    // Check if panel is inverse mounted (contents show up HV flipped)
+    property_get("persist.panel.inversemounted", property, "0");
+    mPanelInverseMounted = !!atoi(property);
 
     // initialize the display orientation transform.
     setProjection(DisplayState::eOrientationDefault, mViewport, mFrame);
@@ -407,6 +413,11 @@ status_t DisplayDevice::orientationToTransfrom(
     default:
         return BAD_VALUE;
     }
+
+    if (DISPLAY_PRIMARY == mHwcDisplayId && isPanelInverseMounted()) {
+        flags = flags ^ Transform::ROT_180;
+    }
+
     tr->set(flags, w, h);
     return NO_ERROR;
 }
